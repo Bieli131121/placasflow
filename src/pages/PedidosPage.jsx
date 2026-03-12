@@ -35,7 +35,7 @@ export default function PedidosPage() {
 
   const handleEdit = (p) => {
     setSelected(null)
-    navigate('/pedidos/novo', { state: { pedido: p } })
+    navigate('/pedidos/editar', { state: { pedido: p } })
   }
 
   const handleUpdateStatus = async () => {

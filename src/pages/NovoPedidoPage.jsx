@@ -1,5 +1,5 @@
 // src/pages/NovoPedidoPage.jsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCollection } from '../hooks/useFirestore'
 import toast from 'react-hot-toast'
@@ -11,7 +11,7 @@ export default function NovoPedidoPage() {
   const location = useLocation()
   const editando = location.state?.pedido || null
 
-  const { data: clientes } = useCollection('clientes')
+  const { data: clientes, add: addCliente } = useCollection('clientes')
   const { data: fabricas } = useCollection('fabricas')
   const { add, update } = useCollection('pedidos')
 
@@ -22,30 +22,116 @@ export default function NovoPedidoPage() {
     pagFabStatus: 'A pagar', pagFabValor: '', pagFabForma: 'Pix', obs: ''
   })
 
+  // busca CPF/nome
+  const [cpfBusca, setCpfBusca] = useState('')
+  const [nomeBusca, setNomeBusca] = useState('')
+  const [clienteEncontrado, setClienteEncontrado] = useState(null) // cliente do banco
+  const [clienteNovo, setClienteNovo] = useState(false) // não encontrou, vai cadastrar
+  const [buscaFeita, setBuscaFeita] = useState(false)
+  const [sugestoes, setSugestoes] = useState([])
+  const [showSugestoes, setShowSugestoes] = useState(false)
+  const nomeRef = useRef(null)
+
   useEffect(() => {
-    if (editando) setForm({ ...editando })
+    if (editando) {
+      setForm({ ...editando })
+      setCpfBusca(editando.cpf || '')
+      setNomeBusca(editando.nomeCliente || '')
+      setBuscaFeita(true)
+    }
   }, [])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const handleClienteSelect = (id) => {
-    const c = clientes.find(x => x.id === id)
-    if (c) setForm(f => ({ ...f, clienteId: id, nomeCliente: c.nome, cpf: c.cpf, tel: c.tel }))
-    else set('clienteId', '')
+  // Busca por CPF (ao sair do campo)
+  const buscarPorCPF = () => {
+    const cpf = cpfBusca.replace(/\D/g, '')
+    if (!cpf || cpf.length < 6) return
+    const found = clientes.find(c => c.cpf && c.cpf.replace(/\D/g, '') === cpf)
+    if (found) {
+      aplicarCliente(found)
+      toast.success(`✅ Cliente encontrado: ${found.nome}`)
+    } else if (cpf.length >= 11) {
+      setClienteNovo(true)
+      setClienteEncontrado(null)
+      setBuscaFeita(true)
+      setForm(f => ({ ...f, cpf: cpfBusca, clienteId: '' }))
+      toast('⚠️ CPF não cadastrado — preencha os dados para cadastrar.', { icon: '📝' })
+    }
+  }
+
+  // Sugestões ao digitar nome
+  const handleNomeChange = (v) => {
+    setNomeBusca(v)
+    set('nomeCliente', v)
+    if (v.length >= 3) {
+      const matches = clientes.filter(c =>
+        c.nome && c.nome.toLowerCase().includes(v.toLowerCase())
+      ).slice(0, 5)
+      setSugestoes(matches)
+      setShowSugestoes(matches.length > 0)
+    } else {
+      setSugestoes([])
+      setShowSugestoes(false)
+    }
+  }
+
+  const aplicarCliente = (c) => {
+    setClienteEncontrado(c)
+    setClienteNovo(false)
+    setBuscaFeita(true)
+    setCpfBusca(c.cpf || '')
+    setNomeBusca(c.nome || '')
+    setForm(f => ({
+      ...f,
+      clienteId: c.id,
+      nomeCliente: c.nome,
+      cpf: c.cpf || '',
+      tel: c.tel || '',
+    }))
+    setSugestoes([])
+    setShowSugestoes(false)
+  }
+
+  const limparCliente = () => {
+    setCpfBusca('')
+    setNomeBusca('')
+    setClienteEncontrado(null)
+    setClienteNovo(false)
+    setBuscaFeita(false)
+    setForm(f => ({ ...f, clienteId: '', nomeCliente: '', cpf: '', tel: '' }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.nomeCliente || !form.placa || !form.tipo) return toast.error('Preencha os campos obrigatórios (*)')
-    if (editando) {
-      const { id, createdAt, ...dados } = form
-      await update(editando.id, { ...dados, placa: form.placa.toUpperCase() })
-      toast.success('Pedido atualizado!')
-    } else {
-      await add({ ...form, placa: form.placa.toUpperCase() })
-      toast.success('Pedido criado!')
+    try {
+      let clienteId = form.clienteId
+
+      // Se cliente novo, cadastra automaticamente
+      if (clienteNovo && !editando) {
+        const novoCliente = await addCliente({
+          nome: form.nomeCliente,
+          cpf: form.cpf,
+          tel: form.tel,
+        })
+        clienteId = novoCliente.id
+        toast.success(`👤 Cliente "${form.nomeCliente}" cadastrado automaticamente!`)
+      }
+
+      if (editando) {
+        const { id, createdAt, updatedAt, ...dados } = form
+        await update(editando.id, { ...dados, clienteId, placa: form.placa.toUpperCase() })
+        toast.success('Pedido atualizado!')
+      } else {
+        await add({ ...form, clienteId, placa: form.placa.toUpperCase() })
+        toast.success('Pedido criado!')
+      }
+      navigate('/pedidos')
+    } catch (err) {
+      console.error('Erro ao salvar pedido:', err)
+      toast.error('Erro ao salvar: ' + err.message)
     }
-    navigate('/pedidos')
   }
 
   return (
@@ -56,26 +142,118 @@ export default function NovoPedidoPage() {
       </div>
       <form className="form-card" onSubmit={handleSubmit}>
         <div className="form-row">
-          <div className="section-divider">Dados do Cliente</div>
-          <div className="form-group full">
-            <label>Vincular Cliente Cadastrado</label>
-            <select value={form.clienteId} onChange={e => handleClienteSelect(e.target.value)}>
-              <option value="">Selecione um cliente cadastrado...</option>
-              {clientes.map(c => <option key={c.id} value={c.id}>{c.nome} — {c.cpf}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Nome do Cliente *</label>
-            <input value={form.nomeCliente} onChange={e => set('nomeCliente', e.target.value)} placeholder="Nome completo" />
-          </div>
-          <div className="form-group">
-            <label>CPF / CNPJ</label>
-            <input value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" />
-          </div>
-          <div className="form-group">
-            <label>Telefone</label>
-            <input value={form.tel} onChange={e => set('tel', e.target.value)} placeholder="(00) 00000-0000" />
-          </div>
+
+          {/* ── BLOCO BUSCA CLIENTE ── */}
+          <div className="section-divider">Identificação do Cliente</div>
+
+          {/* Card de status do cliente */}
+          {buscaFeita && (
+            <div className="form-group full">
+              <div style={{
+                padding: '0.9rem 1.1rem',
+                borderRadius: 10,
+                border: `1.5px solid ${clienteEncontrado ? 'rgba(52,211,153,0.4)' : 'rgba(251,191,36,0.4)'}`,
+                background: clienteEncontrado ? 'rgba(52,211,153,0.07)' : 'rgba(251,191,36,0.07)',
+                display: 'flex', alignItems: 'center', gap: '0.8rem'
+              }}>
+                <span style={{ fontSize: '1.4rem' }}>{clienteEncontrado ? '✅' : '📝'}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: clienteEncontrado ? 'var(--green)' : 'var(--orange)' }}>
+                    {clienteEncontrado ? `Cliente encontrado: ${clienteEncontrado.nome}` : 'Cliente novo — será cadastrado ao salvar'}
+                  </div>
+                  {clienteEncontrado && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 2 }}>
+                      CPF: {clienteEncontrado.cpf || '—'} · Tel: {clienteEncontrado.tel || '—'}
+                    </div>
+                  )}
+                </div>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={limparCliente}>↩ Trocar</button>
+              </div>
+            </div>
+          )}
+
+          {/* Campos de busca */}
+          {!buscaFeita && (
+            <>
+              <div className="form-group">
+                <label>CPF / CNPJ <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(busca automática)</span></label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    value={cpfBusca}
+                    onChange={e => setCpfBusca(e.target.value)}
+                    onBlur={buscarPorCPF}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), buscarPorCPF())}
+                    placeholder="000.000.000-00"
+                    style={{ flex: 1 }}
+                  />
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={buscarPorCPF} style={{ whiteSpace: 'nowrap' }}>🔍 Buscar</button>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ position: 'relative' }}>
+                <label>Nome Completo *</label>
+                <input
+                  ref={nomeRef}
+                  value={nomeBusca}
+                  onChange={e => handleNomeChange(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSugestoes(false), 180)}
+                  placeholder="Digite o nome completo..."
+                />
+                {showSugestoes && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                    background: '#1c2030', border: '1px solid var(--border)', borderRadius: 8,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden'
+                  }}>
+                    {sugestoes.map(c => (
+                      <div
+                        key={c.id}
+                        onMouseDown={() => aplicarCliente(c)}
+                        style={{
+                          padding: '0.7rem 1rem', cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                          transition: 'background 0.1s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,106,247,0.12)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c.nome}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>CPF: {c.cpf || '—'} · Tel: {c.tel || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Campos preenchidos (editáveis se cliente novo) */}
+          {buscaFeita && (
+            <>
+              <div className="form-group">
+                <label>Nome Completo *</label>
+                <input
+                  value={form.nomeCliente}
+                  onChange={e => set('nomeCliente', e.target.value)}
+                  readOnly={!!clienteEncontrado}
+                  style={{ opacity: clienteEncontrado ? 0.6 : 1, cursor: clienteEncontrado ? 'default' : 'text' }}
+                />
+              </div>
+              <div className="form-group">
+                <label>CPF / CNPJ</label>
+                <input
+                  value={form.cpf}
+                  onChange={e => set('cpf', e.target.value)}
+                  readOnly={!!clienteEncontrado}
+                  style={{ opacity: clienteEncontrado ? 0.6 : 1, cursor: clienteEncontrado ? 'default' : 'text' }}
+                />
+              </div>
+              <div className="form-group">
+                <label>Telefone</label>
+                <input value={form.tel} onChange={e => set('tel', e.target.value)} placeholder="(00) 00000-0000" />
+              </div>
+            </>
+          )}
+
           <div className="form-group">
             <label>Responsável</label>
             <select value={form.responsavel} onChange={e => set('responsavel', e.target.value)}>
