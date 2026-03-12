@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 const navItems = [
-  { to: '/',           icon: '📊', label: 'Dashboard', end: true },
+  { to: '/',           icon: '📊', label: 'Dashboard',  end: true },
   { to: '/pedidos',    icon: '📋', label: 'Pedidos' },
   { to: '/clientes',   icon: '👥', label: 'Clientes' },
   { to: '/fabricas',   icon: '🏭', label: 'Fábricas' },
@@ -57,7 +57,9 @@ export default function Layout() {
   return (
     <>
       <header>
-        <div className="logo">Placas<span>Flow</span></div>
+        <div className="logo">Placas<span>Flow</span>
+
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <button
             onClick={openProfile}
@@ -86,8 +88,7 @@ export default function Layout() {
             <>
               <div style={{ borderTop: '1px solid var(--border)', margin: '1rem 1.5rem' }} />
               <NavLink to="/admin" className="nav-item">
-                <span style={{ fontSize: '1rem', width: 20, textAlign: 'center' }}>👑</span>
-                Admin
+                <span style={{ fontSize: '1rem', width: 20, textAlign: 'center' }}>👑</span>Admin
               </NavLink>
             </>
           )}
@@ -98,7 +99,6 @@ export default function Layout() {
         </main>
       </div>
 
-      {/* Bottom Nav mobile */}
       <nav className="bottom-nav">
         <div className="bottom-nav-inner">
           {bottomNavItems.map(item => (
@@ -110,7 +110,6 @@ export default function Layout() {
         </div>
       </nav>
 
-      {/* Modal perfil */}
       {showProfile && (
         <div className="modal-overlay" onClick={() => setShowProfile(false)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -123,6 +122,7 @@ export default function Layout() {
                 <div className="detail-label">E-mail</div>
                 <div className="detail-value">{user?.email}</div>
               </div>
+
               {isAdmin && (
                 <div style={{ background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.2)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.82rem', color: 'var(--accent)' }}>
                   👑 Você é o administrador do sistema

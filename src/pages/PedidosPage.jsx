@@ -33,11 +33,6 @@ export default function PedidosPage() {
     toast.success('Pedido excluído.')
   }
 
-  const handleEdit = (p) => {
-    setSelected(null)
-    navigate('/pedidos/editar', { state: { pedido: p } })
-  }
-
   const handleUpdateStatus = async () => {
     await update(selected.id, { status: newStatus })
     setShowStatusModal(false)
@@ -75,71 +70,37 @@ export default function PedidosPage() {
           </select>
           <select className="filter-select" value={filterTipo} onChange={e => setFilterTipo(e.target.value)}>
             <option value="">Todos os tipos</option>
-            {['Automóvel','Motocicleta','Reboque'].map(t => <option key={t}>{t}</option>)}
+            {['Mercosul','Moto','Especial','Colecionador'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
 
-        {/* Desktop table */}
-        <div className="table-desktop" style={{ overflowX: 'auto', width: '100%' }}>
-          {list.length === 0 ? (
-            <div className="empty"><div className="empty-icon">🔍</div><p>Nenhum pedido encontrado.</p></div>
-          ) : (
-            <table style={{ minWidth: 680, width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{width:70}}>ID</th>
-                  <th>Cliente</th>
-                  <th style={{width:90}}>Placa</th>
-                  <th style={{width:105}}>Status</th>
-                  <th style={{width:115}}>Cli. Pagou?</th>
-                  <th style={{width:90}}>Valor</th>
-                  <th style={{width:105}}>Fab. Paga?</th>
-                  <th style={{width:60}}>Ações</th>
+        {list.length === 0 ? (
+          <div className="empty"><div className="empty-icon">🔍</div><p>Nenhum pedido encontrado.</p></div>
+        ) : (
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Cliente</th><th>Placa</th><th>Tipo</th><th>Status</th><th>Valor</th><th>Cliente Pagou?</th><th>Fábrica Paga?</th><th>Data</th><th>Ações</th></tr>
+            </thead>
+            <tbody>
+              {list.map(p => (
+                <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(p)}>
+                  <td className="td-id">#{p.id.slice(-5)}</td>
+                  <td><div style={{ fontWeight: 500 }}>{p.nomeCliente}</div><div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{p.cpf}</div></td>
+                  <td><b>{p.placa}</b><div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{p.modelo}</div></td>
+                  <td>{tipoBadge(p.tipo)}</td>
+                  <td>{statusBadge(p.status)}</td>
+                  <td>{formatVal(p.valor)}</td>
+                  <td>{pagCliStatusBadge(p.pagamento || 'Aguardando')}</td>
+                  <td>{pagFabStatusBadge(p.pagFabStatus || 'A pagar')}</td>
+                  <td style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{formatDate(p.createdAt)}</td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setSelected(p)}>Ver</button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {list.map(p => (
-                  <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => setSelected(p)}>
-                    <td className="td-id" style={{fontSize:'0.78rem'}}>#{p.id.slice(-5)}</td>
-                    <td>
-                      <div style={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>{p.nomeCliente}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{p.tipo}</div>
-                    </td>
-                    <td><b>{p.placa}</b></td>
-                    <td>{statusBadge(p.status)}</td>
-                    <td>{pagCliStatusBadge(p.pagamento || 'Aguardando')}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{formatVal(p.valor)}</td>
-                    <td>{pagFabStatusBadge(p.pagFabStatus || 'A pagar')}</td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setSelected(p)}>Ver</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Mobile cards */}
-        <div className="mobile-list">
-          {list.map(p => (
-            <div key={p.id} className="mobile-card" onClick={() => setSelected(p)}>
-              <div className="mobile-card-header">
-                <div>
-                  <div className="mobile-card-title">{p.nomeCliente}</div>
-                  <div className="mobile-card-sub"><b>{p.placa}</b> · {p.modelo || '—'}</div>
-                </div>
-                {statusBadge(p.status)}
-              </div>
-              <div className="mobile-card-row">
-                {tipoBadge(p.tipo)}
-                <span style={{ fontWeight: 700, color: 'var(--accent)' }}>{formatVal(p.valor)}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{formatDate(p.createdAt)}</span>
-              </div>
-            </div>
-          ))}
-          {list.length === 0 && <div className="empty"><div className="empty-icon">🔍</div><p>Nenhum pedido encontrado.</p></div>}
-        </div>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* MODAL DETALHE */}
@@ -178,7 +139,6 @@ export default function PedidosPage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-danger btn-sm" onClick={() => handleDelete(selected.id)}>🗑 Excluir</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(selected)}>✏️ Editar</button>
               <button className="btn btn-ghost btn-sm" onClick={() => { setNewStatus(selected.status); setShowStatusModal(true) }}>📋 Status</button>
               <button className="btn btn-ghost btn-sm" onClick={() => { setPagCliForm({ pagamento: selected.pagamento || 'Aguardando', forma: selected.forma || 'Pix' }); setShowPagCliModal(true) }}>💳 Cliente</button>
               <button className="btn btn-ghost btn-sm" onClick={() => { setPagFabForm({ pagFabStatus: selected.pagFabStatus || 'A pagar', pagFabValor: selected.pagFabValor || '', pagFabForma: selected.pagFabForma || 'Pix' }); setShowPagFabModal(true) }}>🏭 Fábrica</button>

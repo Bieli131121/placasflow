@@ -5,7 +5,7 @@ export function statusBadge(s) {
 }
 
 export function tipoBadge(t) {
-  const map = { 'Automóvel': 'mercosul', 'Motocicleta': 'moto', 'Reboque': 'production' }
+  const map = { 'Mercosul': 'mercosul', 'Moto': 'moto', 'Especial': 'production', 'Colecionador': 'done' }
   return <span className={`badge badge-${map[t] || 'mercosul'}`}>{t}</span>
 }
 
@@ -21,8 +21,7 @@ export function pagFabStatusBadge(s) {
 }
 
 export function formatVal(v) {
-  if (!v && v !== 0) return '—'
-  return 'R$ ' + parseFloat(v).toFixed(2).replace('.', ',')
+  return v ? 'R$ ' + parseFloat(v).toFixed(2).replace('.', ',') : '—'
 }
 
 export function formatDate(d) {

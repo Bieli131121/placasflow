@@ -1,7 +1,3 @@
-// src/lib/firebase.js
-// ⚠️ SUBSTITUA pelos seus dados do Firebase Console
-// Acesse: https://console.firebase.google.com → Seu projeto → Configurações → Config do app
-
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
