@@ -58,7 +58,6 @@ export default function Layout() {
     <>
       <header>
         <div className="logo">Placas<span>Flow</span>
-
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <button
@@ -122,7 +121,6 @@ export default function Layout() {
                 <div className="detail-label">E-mail</div>
                 <div className="detail-value">{user?.email}</div>
               </div>
-
               {isAdmin && (
                 <div style={{ background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.2)', borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.82rem', color: 'var(--accent)' }}>
                   👑 Você é o administrador do sistema
