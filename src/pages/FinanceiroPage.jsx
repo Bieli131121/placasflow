@@ -13,18 +13,22 @@ const parseValor = (v) => {
   return parseFloat(s) || 0
 }
 
-const FILTROS_TEMPO = [
-  { label: 'Tudo', dias: null },
-  { label: '7 dias', dias: 7 },
-  { label: '15 dias', dias: 15 },
-  { label: '30 dias', dias: 30 },
+const hoje = new Date().toISOString().split('T')[0]
+
+const atalhos = [
+  { label: 'Tudo', fn: () => ({ ini: '', fim: '' }) },
+  { label: '7d',   fn: () => { const d = new Date(); d.setDate(d.getDate()-7);  return { ini: d.toISOString().split('T')[0], fim: hoje } } },
+  { label: '15d',  fn: () => { const d = new Date(); d.setDate(d.getDate()-15); return { ini: d.toISOString().split('T')[0], fim: hoje } } },
+  { label: '30d',  fn: () => { const d = new Date(); d.setDate(d.getDate()-30); return { ini: d.toISOString().split('T')[0], fim: hoje } } },
+  { label: 'Mês',  fn: () => { const d = new Date(); return { ini: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`, fim: hoje } } },
 ]
 
 export default function FinanceiroPage() {
   const { data: pedidos, update } = useCollection('pedidos')
   const { data: fabricas } = useCollection('fabricas')
   const [tab, setTab] = useState('lucro')
-  const [filtroDias, setFiltroDias] = useState(null)
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
   const [searchCli, setSearchCli] = useState('')
   const [filterCli, setFilterCli] = useState('')
   const [filterTipoCli, setFilterTipoCli] = useState('')
@@ -38,14 +42,14 @@ export default function FinanceiroPage() {
 
   // ── Pedidos filtrados por tempo ──
   const pedidosFiltrados = useMemo(() => {
-    if (!filtroDias) return pedidos
-    const limite = new Date()
-    limite.setDate(limite.getDate() - filtroDias)
+    if (!dataInicio && !dataFim) return pedidos
     return pedidos.filter(p => {
-      const data = p.createdAt?.toDate ? p.createdAt.toDate() : new Date(p.createdAt)
-      return data >= limite
+      const raw = p.dataPedido || (p.createdAt?.toDate ? p.createdAt.toDate().toISOString().split('T')[0] : new Date(p.createdAt).toISOString().split('T')[0])
+      if (dataInicio && raw < dataInicio) return false
+      if (dataFim   && raw > dataFim)    return false
+      return true
     })
-  }, [pedidos, filtroDias])
+  }, [pedidos, dataInicio, dataFim])
 
   // ── Cálculos dos cards ──
   const totalRecebido  = pedidosFiltrados.filter(p => p.pagamento === 'Pago').reduce((s, p) => s + parseValor(p.valor), 0)
@@ -107,14 +111,6 @@ export default function FinanceiroPage() {
     marginBottom: -1, transition: 'all 0.15s'
   })
 
-  const btnFiltroStyle = (dias) => ({
-    fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '0.78rem',
-    padding: '0.4rem 0.9rem', border: '1px solid', borderRadius: '999px',
-    cursor: 'pointer', transition: 'all 0.15s',
-    background: filtroDias === dias ? 'var(--accent)' : 'transparent',
-    color: filtroDias === dias ? '#fff' : 'var(--muted)',
-    borderColor: filtroDias === dias ? 'var(--accent)' : 'var(--border)',
-  })
 
   return (
     <>
@@ -122,14 +118,35 @@ export default function FinanceiroPage() {
         <div className="page-title">Controle <span>Financeiro</span></div>
       </div>
 
-      {/* Filtro de tempo */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600, marginRight: '0.3rem' }}>📅 Período:</span>
-        {FILTROS_TEMPO.map(f => (
-          <button key={String(f.dias)} style={btnFiltroStyle(f.dias)} onClick={() => setFiltroDias(f.dias)}>
-            {f.label}
-          </button>
-        ))}
+      {/* Filtro de período com calendário */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '0.9rem 1.2rem', marginBottom: '1.2rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>📅 Período:</span>
+          <input
+            type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)}
+            style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.4rem 0.7rem', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+          />
+          <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>até</span>
+          <input
+            type="date" value={dataFim} onChange={e => setDataFim(e.target.value)}
+            style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '0.4rem 0.7rem', color: 'var(--text)', fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem', outline: 'none', cursor: 'pointer' }}
+          />
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginLeft: '0.3rem' }}>
+            {atalhos.map(a => (
+              <button key={a.label} onClick={() => { const r = a.fn(); setDataInicio(r.ini); setDataFim(r.fim) }}
+                style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '0.75rem', padding: '0.3rem 0.7rem', border: '1px solid var(--border)', borderRadius: '999px', cursor: 'pointer', background: 'transparent', color: 'var(--muted)', transition: 'all 0.15s' }}
+                onMouseEnter={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.color = 'var(--accent)' }}
+                onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--muted)' }}
+              >{a.label}</button>
+            ))}
+          </div>
+          {(dataInicio || dataFim) && (
+            <button onClick={() => { setDataInicio(''); setDataFim('') }}
+              style={{ fontSize: '0.75rem', color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: '0.2rem' }}>
+              ✕ Limpar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Cards resumo */}
