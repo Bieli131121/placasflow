@@ -6,12 +6,6 @@ import toast from 'react-hot-toast'
 
 const TIPOS_PLACA = ['Automóvel', 'Motocicleta', 'Reboque']
 
-const PRECOS_FIXOS = {
-  'Automóvel':  { valor: '220.00', pagFabValor: '200.00' },
-  'Motocicleta': { valor: '110.00', pagFabValor: '90.00' },
-  'Reboque':    { valor: '110.00', pagFabValor: '90.00' },
-}
-
 export default function NovoPedidoPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -21,9 +15,12 @@ export default function NovoPedidoPage() {
   const { data: fabricas } = useCollection('fabricas')
   const { add, update } = useCollection('pedidos')
 
+  const hoje = new Date().toISOString().split('T')[0]
+
   const [form, setForm] = useState({
     clienteId: '', nomeCliente: '', cpf: '', tel: '', responsavel: '',
     placa: '', tipo: '', modelo: '', cor: '', fabricaId: '',
+    dataPedido: hoje,
     valor: '', pagamento: 'Aguardando', forma: 'Pix', status: 'Pendente',
     pagFabStatus: 'A pagar', pagFabValor: '', pagFabForma: 'Pix', obs: ''
   })
@@ -268,6 +265,12 @@ export default function NovoPedidoPage() {
             </select>
           </div>
 
+          <div className="section-divider">Pedido</div>
+          <div className="form-group">
+            <label>Data do Pedido</label>
+            <input type="date" value={form.dataPedido} onChange={e => set('dataPedido', e.target.value)} />
+          </div>
+
           <div className="section-divider">Veículo e Placa</div>
           <div className="form-group">
             <label>Número da Placa *</label>
@@ -275,15 +278,7 @@ export default function NovoPedidoPage() {
           </div>
           <div className="form-group">
             <label>Tipo de Placa *</label>
-            <select value={form.tipo} onChange={e => {
-              const tipo = e.target.value
-              const preco = PRECOS_FIXOS[tipo]
-              if (preco && !editando) {
-                setForm(f => ({ ...f, tipo, valor: preco.valor, pagFabValor: preco.pagFabValor }))
-              } else {
-                set('tipo', tipo)
-              }
-            }}>
+            <select value={form.tipo} onChange={e => set('tipo', e.target.value)}>
               <option value="">Selecione...</option>
               {TIPOS_PLACA.map(t => <option key={t}>{t}</option>)}
             </select>
