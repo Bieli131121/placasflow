@@ -139,8 +139,6 @@ export default function FinanceiroPage() {
           { label: '⏳ A Receber (Clientes)', value: totalAReceber,  color: 'var(--orange)' },
           { label: '✅ Pago (Fábricas)',      value: totalPagoFab,   color: 'var(--blue)'   },
           { label: '🔴 A Pagar (Fábricas)',   value: totalAPagarFab, color: 'var(--red)'    },
-          { label: '📈 Lucro Realizado',      value: lucroRealizado, color: lucroRealizado >= 0 ? 'var(--green)' : 'var(--red)' },
-          { label: '🔮 Lucro Projetado',      value: lucroProjetado, color: lucroProjetado >= 0 ? 'var(--purple)' : 'var(--red)' },
         ].map(c => (
           <div key={c.label} className="stat-card" style={{ borderTop: `2px solid ${c.color}` }}>
             <div className="stat-label">{c.label}</div>
@@ -164,17 +162,17 @@ export default function FinanceiroPage() {
       {tab === 'lucro' && (
         <>
           {/* Cards lucro destaque */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div className="stat-card" style={{ borderTop: '2px solid var(--green)', padding: '1.2rem' }}>
-              <div className="stat-label">✅ Lucro Realizado</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: lucroRealizado >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'Syne, sans-serif' }}>{formatVal(lucroRealizado)}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.3rem' }}>Clientes pagos + fábricas pagas</div>
-            </div>
-            <div className="stat-card" style={{ borderTop: '2px solid var(--purple)', padding: '1.2rem' }}>
-              <div className="stat-label">🔮 Lucro Projetado</div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: lucroProjetado >= 0 ? 'var(--purple)' : 'var(--red)', fontFamily: 'Syne, sans-serif' }}>{formatVal(lucroProjetado)}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.3rem' }}>Todos os pedidos do período</div>
-            </div>
+          <div className="stats" style={{ marginBottom: '1.5rem' }}>
+            {[
+              { label: '📈 Lucro Realizado', value: lucroRealizado, color: lucroRealizado >= 0 ? 'var(--green)' : 'var(--red)', sub: 'Clientes pagos + fábricas pagas' },
+              { label: '🔮 Lucro Projetado', value: lucroProjetado, color: lucroProjetado >= 0 ? 'var(--purple)' : 'var(--red)', sub: 'Todos os pedidos do período' },
+            ].map(c => (
+              <div key={c.label} className="stat-card" style={{ borderTop: `2px solid ${c.color}` }}>
+                <div className="stat-label">{c.label}</div>
+                <div className="stat-value" style={{ color: c.color, fontSize: '1.2rem' }}>{formatVal(c.value)}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: '0.3rem' }}>{c.sub}</div>
+              </div>
+            ))}
           </div>
 
           {/* Lucro por tipo */}
