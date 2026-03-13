@@ -6,6 +6,12 @@ import toast from 'react-hot-toast'
 
 const TIPOS_PLACA = ['Automóvel', 'Motocicleta', 'Reboque']
 
+const PRECOS_FIXOS = {
+  'Automóvel':  { valor: '220.00', pagFabValor: '200.00' },
+  'Motocicleta': { valor: '110.00', pagFabValor: '90.00' },
+  'Reboque':    { valor: '110.00', pagFabValor: '90.00' },
+}
+
 export default function NovoPedidoPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -269,7 +275,15 @@ export default function NovoPedidoPage() {
           </div>
           <div className="form-group">
             <label>Tipo de Placa *</label>
-            <select value={form.tipo} onChange={e => set('tipo', e.target.value)}>
+            <select value={form.tipo} onChange={e => {
+              const tipo = e.target.value
+              const preco = PRECOS_FIXOS[tipo]
+              if (preco && !editando) {
+                setForm(f => ({ ...f, tipo, valor: preco.valor, pagFabValor: preco.pagFabValor }))
+              } else {
+                set('tipo', tipo)
+              }
+            }}>
               <option value="">Selecione...</option>
               {TIPOS_PLACA.map(t => <option key={t}>{t}</option>)}
             </select>
